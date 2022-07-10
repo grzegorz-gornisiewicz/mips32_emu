@@ -1,4 +1,3 @@
-#pragma once
 #include <iostream>
 #include <string>
 #include <vector>
@@ -6,6 +5,14 @@
 #include "ibus.h"
 
 using namespace std;
+
+#ifndef _MIPS32
+#define _MIPS32
+#define OPCODE_SHIFT 26
+#define OPCODE_MASK 0b111111 << OPCODE_SHIFT
+#define FUNCT_MASK 0b111111
+#endif // !MIPS32
+
 /*
 	Inspired by:
 		https://www.youtube.com/watch?v=PlavjNH_RRU&list=PLylNWPMX1lPlmEeeMdbEFQo20eHAJL8hx
@@ -62,25 +69,30 @@ typedef enum {
 } Regs;
 
 typedef struct {
-	int32_t funct : 6;
-	int32_t shmt : 5;
-	int32_t rd : 5;
-	int32_t rt : 5;
-	int32_t rs : 5;
-	int32_t op : 6;
+	uint32_t funct : 6;
+	uint32_t shmt : 5;
+	uint32_t rd : 5;
+	uint32_t rt : 5;
+	uint32_t rs : 5;
+	uint32_t op : 6;
 } Register;
 
 typedef struct {
-	int16_t arg : 16;
-	int16_t rt : 5;
-	int16_t rs : 5;
-	int16_t op : 6;
+	uint16_t arg : 16;
+	uint16_t rt : 5;
+	uint16_t rs : 5;
+	uint16_t op : 6;
 } Immediate;
 
 typedef struct {
-	int32_t target_address : 26;
-	int32_t op : 6;
+	uint32_t target_address : 26;
+	uint32_t op : 6;
 } Jump;
+
+typedef union {
+	uint32_t word32;
+	uint8_t bytes[4];
+} Word;
 
 class MIPS32
 {
@@ -101,20 +113,29 @@ private:
 	uint32_t _pc = 0;//program counter
 	uint32_t _hi = 0;
 	uint32_t _lo = 0;
+	bool _break;//TODO: implement CPU state
 
 	uint32_t _clock = 0;
 	uint32_t _fetched = 0;//current instruction, fetched from andress stored in PC
-	vector<Opcode> _opcodes;
+	Register* _reg;
+	Immediate* _imm;
+	Jump* _jmp;
+	
+	vector<Opcode> _ropcodes;
+	vector<Opcode> _jopcodes;
+	vector<Opcode> _iopcodes;
 
 public:
 	MIPS32(IBus* bus);
 
-	void Tick();
+	bool Tick();
 
 private:
 	void InitOpcodes();
 	void Fetch();
+	void Clear();
 	void Execute();
+	void Decode();
 
 	//Arithmetic and logical instructions
 	void ADD();

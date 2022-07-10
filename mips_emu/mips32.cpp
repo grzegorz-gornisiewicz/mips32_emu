@@ -2,34 +2,103 @@
 
 #include <algorithm>
 #include <iostream>
+#include <bitset>
 
 using namespace std;
 
-void MIPS32::Tick()
+bool MIPS32::Tick()
 {
 	Fetch();
 	Execute();
+	
 	_clock++;
+
+	return _break;
 }
 
 void MIPS32::Fetch()
 {
 	if (_bus != nullptr) {
 		_fetched = _bus->Read(_pc);
+		_break = (_fetched == (uint32_t)0x0);
 		_pc += 4;
-		if (_pc > _bus->Size()) _pc = 0;//overturn _pc when we reach end of memory
+		if (_pc > _bus->Size()) {
+			cout << "PC overturned" << endl;
+			_pc = 0;//overturn _pc when we reach end of memory
+		}
 	}
+}
+
+void MIPS32::Clear()
+{
+	_reg = nullptr;
+	_imm = nullptr;
+	_jmp = nullptr;
 }
 
 void MIPS32::Execute()
 {
+	Clear();
+	Decode();
+}
 
+void MIPS32::Decode()
+{
+	uint32_t opcode = _fetched & OPCODE_MASK;
+	uint32_t funct = _fetched & FUNCT_MASK;
+
+	//check if it's R-Type
+	//R-Type commands op = 0 always
+	if (opcode == 0) {
+		for (vector<Opcode>::iterator i = _ropcodes.begin(); i != _ropcodes.end(); i++)
+		{
+			Register* reg = (Register*)&i->inst;
+
+			if (opcode == 0 && funct == (uint32_t)reg->funct) {
+				_reg = (Register*)&i->inst;
+				printf("%s\n", i->mnemonic.c_str());
+				return;
+			}
+		}
+	}
+
+	//check if it's J-Type
+	for (vector<Opcode>::iterator i = _jopcodes.begin(); i != _jopcodes.end(); i++)
+	{
+		Jump* jmp = (Jump*)&i->inst;
+		
+		if ((uint32_t)jmp->op << OPCODE_SHIFT == opcode)
+		{
+			_jmp = jmp;
+			printf("%s\n", i->mnemonic.c_str());
+			return;
+		}
+	}
+
+	//if it's not R-Type nor J-Type
+	//then it should be I-Type
+	for (vector<Opcode>::iterator i = _iopcodes.begin(); i != _iopcodes.end(); i++)
+	{
+		Immediate* imm = (Immediate*)&i->inst;
+
+		if ((uint32_t)imm->op << OPCODE_SHIFT == opcode)
+		{
+			_imm = imm;
+			printf("%s\n", i->mnemonic.c_str());
+			return;
+		}
+	}
+
+	//unsupported opcode
+	printf("usupported opcode %x\n", _fetched);
+	cout << bitset<32>{ _fetched } << endl;
+	_break = true;
 }
 
 //based on:
 //https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00086-2B-MIPS32BIS-AFP-6.06.pdf
 void MIPS32::InitOpcodes() {
-	_opcodes = {
+	_ropcodes = {
 		//R-Format
 		{"sll",    (uint32_t)0b000000, &MIPS32::SLL},//0
 		{"srl",    (uint32_t)0b000010, &MIPS32::SRL},//2, unsigned right shift
@@ -39,10 +108,10 @@ void MIPS32::InitOpcodes() {
 		{"srav",   (uint32_t)0b000111, &MIPS32::SRAV},//7, signed right shift
 		{"jr",	   (uint32_t)0b001000, &MIPS32::JR},//8, R[$rs] must be a multiple of 4
 		
-		//can have special of jalr $rs form when $rd == $rd
+		//can have special of jalr $rs form when $rd == 31
 		{"jalr",   (uint32_t)0b001001, &MIPS32::JALR},//9, R[$rs] must be a multiple of 4
 		
-		{"syscall",(uint32_t)0b001000, &MIPS32::SYSCALL},//12
+		{"syscall",(uint32_t)0b001100, &MIPS32::SYSCALL},//12
 		{"mfhi",   (uint32_t)0b010000, &MIPS32::MFHI},//16
 		{"mthi",   (uint32_t)0b010001, &MIPS32::MTHI},//17
 		{"mflo",   (uint32_t)0b010010, &MIPS32::MFLO},//18
@@ -61,13 +130,17 @@ void MIPS32::InitOpcodes() {
 		{"nor",    (uint32_t)0b100111, &MIPS32::NOR},//39
 		{"slt",	   (uint32_t)0b101010, &MIPS32::SLT},//42, signed comparison
 		{"sltu",   (uint32_t)0b101011, &MIPS32::SLTU},//43, unsigned comparison
+	};
 
+	_jopcodes = {
 		//J-Format
 		//Jump instructions use pseudo-absolute addressing, in which the upper 4 bits 
 		//of the computed address are taken relatively from the program counter.
 		{"j",	(uint32_t)0b000010 << 26, &MIPS32::J},//2,
 		{"jal", (uint32_t)0b000011 << 26, &MIPS32::JAL},//3,
+	};
 
+	_iopcodes = {
 		//I-Format
 		//These instructions are identified and differentiated by their opcode numbers
 		//(any number greater than 3). All of these instructions feature a 16-bit immediate,
@@ -110,8 +183,6 @@ void MIPS32::InitOpcodes() {
 		//https://student.cs.uwaterloo.ca/~isg/res/mips/traps
 		{"trap", (uint32_t)0b011010 << 26, &MIPS32::TRAP},
 	};
-
-	sort(_opcodes.begin(), _opcodes.end(), Opcode::Compare);
 
 	cout << "Opcodes initialized" << endl;
 }
@@ -370,3 +441,4 @@ void MIPS32::MFC0()
 void MIPS32::MTC0()
 {
 }
+
