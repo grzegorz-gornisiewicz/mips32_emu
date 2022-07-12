@@ -17,69 +17,52 @@ using namespace std;
 #include <bitset>
 
 /*
-.data
-str:  .asciiz "\nHello World!\n"
-# You can change what is between the quotes if you like
-
-.text
-.globl main
-
-main:
-# Do the addition
-# For this, we first need to put the values
-# to add into registers ($t0 and $t1)
-# You can change the 30 below to another value
-li $t0, 30
-# You can change the 20 below to another value
-li $t1, 20
-
-# Now we can add the values in $t0
-# and $t1, putting the result in special register $a0
-add $a0, $t0, $t1
-
-# Set up for printing the value in $a0.
-# A 1 in $v0 means we want to print an integer
-li $v0, 1
-
-# The system call looks at what is in $v0
-# and $a0, and knows to print what is in $a0
-syscall
-
-# Now we want to print Hello World
-# So we load the (address of the) string into $a0.
-# The address of the string is too big to be stored
-# by one instruction, so we first load the upper half,
-# shift it across, then load the lower half
-la $a0, str
-
-# And put a 4 in $v0 to mean print a string
-li $v0, 4
-
-# And just like before syscall looks at
-# $v0 and $a0 and knows to print the string
-syscall
-
-# Nicely end the program
-li $v0, 0
-jr $ra
+* example programs: https://www.csfieldguide.org.nz/en/interactives/mips-assembler/
 */
 vector<uint32_t> program = {
-        0x2408001e,
-        0x24090014,
-        0x01092020,
-        0x24020001,
-        0x0000000c,
-        0x240400c0,
-        0x00042400,
-        0x24840000,
-        0x24020004,
-        0x0000000c,
-        0x24020000,
-        0x03e00008,
-        0x0a48656c,
-        0x6c6f2057,
-        0x6f726c64,
-        0x210a0000,
+    0x2408001e,
+    0x24090014,
+    0x01092020,
+    0x24020001,
+    0x0000000c,
+    0x240400c0,
+    0x00042400,
+    0x24840000,
+    0x24020004,
+    0x0000000c,
+    0x24020000,
+    0x03e00008,
+    0x0a48656c,
+    0x6c6f2057,
+    0x6f726c64,
+    0x210a0000
+};
+
+vector<uint32_t> complex = {
+    0x24080005,
+    0x24090000,
+    0x1109000a,
+    0x00082020,
+    0x24020001,
+    0x0000000c,
+    0x24020004,
+    0x240400c0,
+    0x00042400,
+    0x24840008,
+    0x0000000c,
+    0x2108ffff,
+    0x08400008,
+    0x24020004,
+    0x240400c0,
+    0x00042400,
+    0x24840000,
+    0x0000000c,
+    0x24020000,
+    0x03e00008,
+    0x474f2121,
+    0x2121210a,
+    0x00000000,
+    0x0a000000
 };
 
 int main()
@@ -98,7 +81,6 @@ int main()
         Word word;
         word.word32 = (uint32_t)*i;
 
-        //TODO: consider to add Write/Read uint32_t functions
         //it's for x86 platforms, convertion from LITTLE ENDIAN to BIG ENDIAN
         bus->Write(addr + 0, word.bytes[3]);
         bus->Write(addr + 1, word.bytes[2]);
@@ -114,7 +96,4 @@ int main()
     }
 
     cout << "end of execution" << endl;
-    //cout << i->mnemonic << " ";
-    //cout << bitset<6>{(* (uint32_t*)&i->inst) >> 26} << ":";
-    //cout << bitset<6>{masked >> 26} << endl;
 }

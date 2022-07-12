@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "ibus.h"
 
@@ -9,8 +10,19 @@ using namespace std;
 #ifndef _MIPS32
 #define _MIPS32
 #define OPCODE_SHIFT 26
-#define OPCODE_MASK 0b111111 << OPCODE_SHIFT
+#define RS_SHIFT 21
+#define RT_SHIFT 16
+#define RD_SHIFT 11
+#define OPCODE_MASK (uint32_t)(0b111111 << OPCODE_SHIFT)
+#define RS_MASK (uint32_t)(0b11111 << RS_SHIFT)
+#define RT_MASK (uint32_t)(0b11111 << RT_SHIFT)
+#define RD_MASK (uint32_t)(0b11111 << RD_SHIFT)
+#define IMM_MASK 0xffff
 #define FUNCT_MASK 0b111111
+#define RS(data) (uint32_t)((data & RS_MASK) >> RS_SHIFT)
+#define RT(data) (uint32_t)((data & RT_MASK) >> RT_SHIFT)
+#define RD(data) (uint32_t)((data & RD_MASK) >> RD_SHIFT)
+#define IMM(data) (uint16_t)(data & IMM_MASK)
 #endif // !MIPS32
 
 /*
@@ -66,28 +78,7 @@ typedef enum {
 	//return address, calle save
 	R31 = 31,
 	ra = 31,
-} Regs;
-
-typedef struct {
-	uint32_t funct : 6;
-	uint32_t shmt : 5;
-	uint32_t rd : 5;
-	uint32_t rt : 5;
-	uint32_t rs : 5;
-	uint32_t op : 6;
-} Register;
-
-typedef struct {
-	uint16_t arg : 16;
-	uint16_t rt : 5;
-	uint16_t rs : 5;
-	uint16_t op : 6;
-} Immediate;
-
-typedef struct {
-	uint32_t target_address : 26;
-	uint32_t op : 6;
-} Jump;
+} Reg;
 
 typedef union {
 	uint32_t word32;
@@ -101,11 +92,30 @@ private:
 	struct Opcode
 	{
 		string mnemonic;
-		uint32_t inst;
-		void (MIPS32::* func)(void) = nullptr;
-		static bool Compare(Opcode a, Opcode b) {
-			return a.inst < b.inst;
-		}
+		uint32_t inst = 0x0;//nop
+		void (MIPS32::* func)() = nullptr;
+	};
+
+	map<Reg, string> _reg_names = {
+		{ R0, "$zero"},
+		{ R1, "$at"},
+		{ R2, "$v0"}, { R3, "$v1"},
+		{ R4, "$a0"}, { R5, "$a1"},	{ R6, "$a2"}, { R7, "$a3"},
+		
+		{ R8, "$t0"}, { R9, "$t1"},	{ R10, "$t2"}, { R11, "$t3"},
+		{ R12, "$t4"}, { R13, "$t5"}, { R14, "$t6"}, { R15, "$t7"},
+		
+		{ R16, "$s0"}, { R17, "$s1"}, { R18, "$s2"}, { R19, "$s3"},
+		{ R20, "$s4"}, { R21, "$s5"}, { R22, "$s6"}, { R23, "$s7"},
+		
+		{ R24, "$t8"}, { R25, "$t9"},
+		
+		{ R26, "$k0"}, { R27, "$k1"},
+		
+		{ R28, "$gp"},
+		{ R29, "$sp"},
+		{ R30, "$fp"},
+		{ R31, "$ra"},
 	};
 
 	IBus* _bus;
@@ -117,10 +127,8 @@ private:
 
 	uint32_t _clock = 0;
 	uint32_t _fetched = 0;//current instruction, fetched from andress stored in PC
-	Register* _reg;
-	Immediate* _imm;
-	Jump* _jmp;
-	
+	Opcode _opcode;
+
 	vector<Opcode> _ropcodes;
 	vector<Opcode> _jopcodes;
 	vector<Opcode> _iopcodes;
@@ -133,9 +141,10 @@ public:
 private:
 	void InitOpcodes();
 	void Fetch();
-	void Clear();
 	void Execute();
 	void Decode();
+
+	void LogImm(bool printRT);
 
 	//Arithmetic and logical instructions
 	void ADD();

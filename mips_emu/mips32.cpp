@@ -18,28 +18,23 @@ bool MIPS32::Tick()
 
 void MIPS32::Fetch()
 {
-	if (_bus != nullptr) {
+	if (_bus != nullptr)
+	{
 		_fetched = _bus->Read(_pc);
 		_break = (_fetched == (uint32_t)0x0);
 		_pc += 4;
-		if (_pc > _bus->Size()) {
+		if (_pc > _bus->Size())
+		{
 			cout << "PC overturned" << endl;
 			_pc = 0;//overturn _pc when we reach end of memory
 		}
 	}
 }
 
-void MIPS32::Clear()
-{
-	_reg = nullptr;
-	_imm = nullptr;
-	_jmp = nullptr;
-}
-
 void MIPS32::Execute()
 {
-	Clear();
 	Decode();
+	(this->*_opcode.func)();//call the function
 }
 
 void MIPS32::Decode()
@@ -52,11 +47,8 @@ void MIPS32::Decode()
 	if (opcode == 0) {
 		for (vector<Opcode>::iterator i = _ropcodes.begin(); i != _ropcodes.end(); i++)
 		{
-			Register* reg = (Register*)&i->inst;
-
-			if (opcode == 0 && funct == (uint32_t)reg->funct) {
-				_reg = (Register*)&i->inst;
-				printf("%s\n", i->mnemonic.c_str());
+			if (opcode == 0 && funct == ((Opcode)*i).inst) {
+				_opcode = *i;
 				return;
 			}
 		}
@@ -65,12 +57,9 @@ void MIPS32::Decode()
 	//check if it's J-Type
 	for (vector<Opcode>::iterator i = _jopcodes.begin(); i != _jopcodes.end(); i++)
 	{
-		Jump* jmp = (Jump*)&i->inst;
-		
-		if ((uint32_t)jmp->op << OPCODE_SHIFT == opcode)
+		if (((Opcode)*i).inst << OPCODE_SHIFT == opcode)
 		{
-			_jmp = jmp;
-			printf("%s\n", i->mnemonic.c_str());
+			_opcode = *i;
 			return;
 		}
 	}
@@ -79,12 +68,9 @@ void MIPS32::Decode()
 	//then it should be I-Type
 	for (vector<Opcode>::iterator i = _iopcodes.begin(); i != _iopcodes.end(); i++)
 	{
-		Immediate* imm = (Immediate*)&i->inst;
-
-		if ((uint32_t)imm->op << OPCODE_SHIFT == opcode)
+		if (((Opcode) *i).inst == opcode)
 		{
-			_imm = imm;
-			printf("%s\n", i->mnemonic.c_str());
+			_opcode = *i;
 			return;
 		}
 	}
@@ -195,9 +181,21 @@ MIPS32::MIPS32(IBus *bus)
 	memset(_registers, 0, sizeof(_registers));
 }
 
+void MIPS32::LogImm(bool printRT = false) {
+	cout << _opcode.mnemonic;
+	cout << " " << _reg_names[(Reg)RT(_fetched)];
+	cout << ", " << _reg_names[(Reg)RS(_fetched)];
+	cout << ", " << hex << IMM(_fetched);
+	if (printRT) {
+		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << _registers[RT(_fetched)];
+	}
+	cout << endl;
+}
+
 //Arithmeticand logical instructions
 void MIPS32::ADD()
 {
+	cout << "MIPS32::ADD" << endl;
 }
 
 void MIPS32::ADDU()
@@ -206,10 +204,16 @@ void MIPS32::ADDU()
 
 void MIPS32::ADDI()
 {
+	
 }
 
 void MIPS32::ADDIU()
 {
+	_registers[RT(_fetched)] = _registers[RS(_fetched)] + IMM(_fetched);
+#ifdef _DEBUG
+	LogImm(true);
+#endif // DEBUG
+
 }
 
 void MIPS32::AND()
@@ -250,6 +254,7 @@ void MIPS32::ORI()
 
 void MIPS32::SLL()
 {
+	cout << "MIPS32::SLL" << endl;
 }
 
 void MIPS32::SLLV()
@@ -367,6 +372,7 @@ void MIPS32::JALR()
 
 void MIPS32::JR()
 {
+	cout << "MIPS32::JR" << endl;
 }
 
 //Load instructions
@@ -429,6 +435,7 @@ void MIPS32::TRAP()
 //System Call	epc=pc; pc=0x3c	000000|00000000000000000000|001100
 void MIPS32::SYSCALL()
 {
+	cout << "MIPS32::SYSCALL" << endl;
 }
 
 //Coprocessor
