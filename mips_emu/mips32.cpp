@@ -6,6 +6,21 @@
 
 using namespace std;
 
+void MIPS32::SetPC(uint32_t addr)
+{
+	_pc = addr;
+}
+
+uint32_t MIPS32::GetPC()
+{
+	return _pc;
+}
+
+void MIPS32::EnableLog(bool enable)
+{
+	_logEnabled = enable;
+}
+
 bool MIPS32::Tick()
 {
 	Fetch();
@@ -181,7 +196,22 @@ MIPS32::MIPS32(IBus *bus)
 	memset(_registers, 0, sizeof(_registers));
 }
 
+void MIPS32::LogShift(bool printRT = false) {
+	if (!_logEnabled) return;
+
+	cout << _opcode.mnemonic;
+	cout << " " << _reg_names[(Reg)RT(_fetched)];
+	cout << ", " << _reg_names[(Reg)RD(_fetched)];
+	cout << ", " << hex << SHAMT(_fetched);
+	if (printRT) {
+		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << _registers[RT(_fetched)];
+	}
+	cout << endl;
+}
+
 void MIPS32::LogImm(bool printRT = false) {
+	if (!_logEnabled) return;
+
 	cout << _opcode.mnemonic;
 	cout << " " << _reg_names[(Reg)RT(_fetched)];
 	cout << ", " << _reg_names[(Reg)RS(_fetched)];
@@ -192,10 +222,24 @@ void MIPS32::LogImm(bool printRT = false) {
 	cout << endl;
 }
 
+void MIPS32::LogReg(bool printRD = false) {
+	if (!_logEnabled) return;
+	
+	cout << _opcode.mnemonic;
+	cout << " " << _reg_names[(Reg)RD(_fetched)];
+	cout << ", " << _reg_names[(Reg)RS(_fetched)];
+	cout << ", " << _reg_names[(Reg)RT(_fetched)];
+	if (printRD) {
+		cout << " => " << _reg_names[(Reg)RD(_fetched)] << " = " << hex << _registers[RD(_fetched)];
+	}
+	cout << endl;
+}
+
 //Arithmeticand logical instructions
 void MIPS32::ADD()
 {
-	cout << "MIPS32::ADD" << endl;
+	LogReg(true);
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] + _registers[RT(_fetched)];
 }
 
 void MIPS32::ADDU()
@@ -209,11 +253,8 @@ void MIPS32::ADDI()
 
 void MIPS32::ADDIU()
 {
-	_registers[RT(_fetched)] = _registers[RS(_fetched)] + IMM(_fetched);
-#ifdef _DEBUG
 	LogImm(true);
-#endif // DEBUG
-
+	_registers[RT(_fetched)] = _registers[RS(_fetched)] + IMM(_fetched);
 }
 
 void MIPS32::AND()
@@ -254,7 +295,8 @@ void MIPS32::ORI()
 
 void MIPS32::SLL()
 {
-	cout << "MIPS32::SLL" << endl;
+	LogShift(true);
+	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] << SHAMT(_fetched);
 }
 
 void MIPS32::SLLV()
@@ -435,7 +477,33 @@ void MIPS32::TRAP()
 //System Call	epc=pc; pc=0x3c	000000|00000000000000000000|001100
 void MIPS32::SYSCALL()
 {
-	cout << "MIPS32::SYSCALL" << endl;
+	if (_logEnabled) {
+		cout << _opcode.mnemonic << endl;
+	}
+
+	switch (_registers[v0]) {
+		case 1:	//print integer
+		{ 
+
+			cout << dec << _registers[a0] << endl;
+		} break;
+		
+		case 4: //print string
+		{
+			string str = "";
+			int index = 0;
+			
+			while (true)
+			{
+				uint8_t byte = (uint8_t)((_bus->Read(_registers[a0] + index) >> 24));
+				if (byte == 0) break;
+				str.push_back((char)byte);
+				index += 1;
+			};
+			
+			cout << str << endl;
+		}
+	}
 }
 
 //Coprocessor

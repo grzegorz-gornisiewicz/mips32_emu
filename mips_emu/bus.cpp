@@ -1,4 +1,5 @@
 #include "bus.h"
+#include <iostream>
 
 using namespace std;
 
@@ -22,7 +23,10 @@ uint32_t Bus::Read(uint32_t addr) {
 
 void Bus::Write(uint32_t addr, uint8_t data)
 {
-	_mem[addr] = data;
+	if (addr < Size())
+	{
+		_mem[addr] = data;
+	}
 }
 
 /*

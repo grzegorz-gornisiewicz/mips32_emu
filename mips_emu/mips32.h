@@ -10,6 +10,7 @@ using namespace std;
 #ifndef _MIPS32
 #define _MIPS32
 #define OPCODE_SHIFT 26
+#define SHAMT_SHIFT 6
 #define RS_SHIFT 21
 #define RT_SHIFT 16
 #define RD_SHIFT 11
@@ -19,9 +20,11 @@ using namespace std;
 #define RD_MASK (uint32_t)(0b11111 << RD_SHIFT)
 #define IMM_MASK 0xffff
 #define FUNCT_MASK 0b111111
+#define SHAMT_MASK (uint32_t)(0b11111 << SHAMT_SHIFT)
 #define RS(data) (uint32_t)((data & RS_MASK) >> RS_SHIFT)
 #define RT(data) (uint32_t)((data & RT_MASK) >> RT_SHIFT)
 #define RD(data) (uint32_t)((data & RD_MASK) >> RD_SHIFT)
+#define SHAMT(data) (uint32_t)((data & SHAMT_MASK) >> SHAMT_SHIFT)
 #define IMM(data) (uint16_t)(data & IMM_MASK)
 #endif // !MIPS32
 
@@ -118,6 +121,8 @@ private:
 		{ R31, "$ra"},
 	};
 
+	bool _logEnabled = false;
+
 	IBus* _bus;
 	uint32_t _registers[32];
 	uint32_t _pc = 0;//program counter
@@ -136,6 +141,10 @@ private:
 public:
 	MIPS32(IBus* bus);
 
+	void SetPC(uint32_t addr);
+	uint32_t GetPC();
+	void EnableLog(bool enable = true);
+	
 	bool Tick();
 
 private:
@@ -145,6 +154,8 @@ private:
 	void Decode();
 
 	void LogImm(bool printRT);
+	void LogReg(bool printRD);
+	void LogShift(bool printRT);
 
 	//Arithmetic and logical instructions
 	void ADD();
