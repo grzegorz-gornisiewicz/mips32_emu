@@ -136,6 +136,9 @@ private:
 public:
 	MIPS32(IBus* bus);
 
+	void SetPC(uint32_t addr);
+	uint32_t GetPC();
+	
 	bool Tick();
 
 private:
@@ -145,6 +148,7 @@ private:
 	void Decode();
 
 	void LogImm(bool printRT);
+	void LogReg(bool printRD);
 
 	//Arithmetic and logical instructions
 	void ADD();
