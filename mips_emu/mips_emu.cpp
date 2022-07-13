@@ -32,6 +32,9 @@ vector<uint32_t> program = {
     0x0000000c,
     0x24020000,
     0x03e00008,
+};
+
+vector<uint32_t> data1 = {
     0x0a48656c,
     0x6c6f2057,
     0x6f726c64,
@@ -58,25 +61,42 @@ vector<uint32_t> complex = {
     0x24840000,
     0x0000000c,
     0x24020000,
-    0x03e00008,
+    0x03e00008
+};
+
+vector<uint32_t> data2 = {
     0x474f2121,
     0x2121210a,
     0x00000000,
     0x0a000000
 };
 
+void CopyToMemory(uint32_t addr, vector<uint32_t>* source, IBus* bus);
+
 int main()
 {
     cout << "MIPS32 EMU\n";
     cout << "Version " << VER_MAJOR << "." << VER_MINOR << " (" << VER_BUILD << ")" << endl;
 
-    //initialize RAM
-    IBus *bus = new Bus(1024);
-    
+    //initialize 16MB of RAM (in KBs)
+    IBus *bus = new Bus(16 * 1024);
     //feed with test program and data
-    uint32_t addr = (uint32_t)0x0;
+    uint32_t addr = (uint32_t)0x00400000;
+    CopyToMemory(addr, &program, bus);
+    addr = (uint32_t)0x00C00000;
+    CopyToMemory(addr, &data1, bus);
+
+    MIPS32 *core = new MIPS32(bus);
+    core->SetPC(0x00400000);
     
-    for (vector<uint32_t>::iterator i = program.begin(); i != program.end(); i++)
+    while (!core->Tick()) {}
+
+    cout << "end of execution" << endl;
+}
+
+void CopyToMemory(uint32_t addr, vector<uint32_t>* source, IBus *bus)
+{
+    for (vector<uint32_t>::iterator i = source->begin(); i != source->end(); i++)
     {
         Word word;
         word.word32 = (uint32_t)*i;
@@ -90,10 +110,4 @@ int main()
         addr += 4;
     }
 
-    MIPS32 *core = new MIPS32(bus);
-
-    while (!core->Tick()) {
-    }
-
-    cout << "end of execution" << endl;
 }
