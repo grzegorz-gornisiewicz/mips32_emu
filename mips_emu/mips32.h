@@ -156,6 +156,7 @@ private:
 	void LogImm(bool printRT);
 	void LogReg(bool printRD);
 	void LogShift(bool printRT);
+	void LogJr(bool printRA);
 
 	//Arithmetic and logical instructions
 	void ADD();
@@ -236,4 +237,7 @@ private:
 	//Coprocessor
 	void MFC0();
 	void MTC0();
+
+	//No operation
+	void NOP();
 };

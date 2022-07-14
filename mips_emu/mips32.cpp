@@ -24,7 +24,8 @@ void MIPS32::EnableLog(bool enable)
 bool MIPS32::Tick()
 {
 	Fetch();
-	Execute();
+	if (_fetched == (uint32_t)0x0) NOP();
+	else Execute();
 	
 	_clock++;
 
@@ -36,7 +37,6 @@ void MIPS32::Fetch()
 	if (_bus != nullptr)
 	{
 		_fetched = _bus->Read(_pc);
-		_break = (_fetched == (uint32_t)0x0);
 		_pc += 4;
 		if (_pc > _bus->Size())
 		{
@@ -235,6 +235,17 @@ void MIPS32::LogReg(bool printRD = false) {
 	cout << endl;
 }
 
+void MIPS32::LogJr(bool printRA = false) {
+	if (!_logEnabled) return;
+
+	cout << _opcode.mnemonic;
+	cout << " " << _reg_names[(Reg)RS(_fetched)];
+	if (printRA) {
+		cout << " => " << _reg_names[(Reg)RS(_fetched)] << " = " << hex << _registers[RS(_fetched)];
+	}
+	cout << endl;
+}
+
 //Arithmeticand logical instructions
 void MIPS32::ADD()
 {
@@ -313,6 +324,8 @@ void MIPS32::SRAV()
 
 void MIPS32::SRL()
 {
+	LogShift(true);
+	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] >> SHAMT(_fetched);
 }
 
 void MIPS32::SRLV()
@@ -414,7 +427,8 @@ void MIPS32::JALR()
 
 void MIPS32::JR()
 {
-	cout << "MIPS32::JR" << endl;
+	LogJr(true);
+	_pc = _registers[(Reg)RS(_fetched)];
 }
 
 //Load instructions
@@ -517,3 +531,10 @@ void MIPS32::MTC0()
 {
 }
 
+void MIPS32::NOP()
+{
+	if (_logEnabled)
+	{
+		cout << "nop" << endl;
+	}
+}
