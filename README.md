@@ -7,3 +7,5 @@ MIPS32 emulator
 - ADDIU
 - SLL
 - SYSCALL (prints integer and asciiz string)
+- JR
+- NOP
