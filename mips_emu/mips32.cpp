@@ -72,7 +72,7 @@ void MIPS32::Decode()
 	//check if it's J-Type
 	for (vector<Opcode>::iterator i = _jopcodes.begin(); i != _jopcodes.end(); i++)
 	{
-		if (((Opcode)*i).inst << OPCODE_SHIFT == opcode)
+		if (((Opcode)*i).inst == opcode)
 		{
 			_opcode = *i;
 			return;
@@ -204,7 +204,7 @@ void MIPS32::LogShift(bool printRT = false) {
 	cout << ", " << _reg_names[(Reg)RD(_fetched)];
 	cout << ", " << hex << SHAMT(_fetched);
 	if (printRT) {
-		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << _registers[RT(_fetched)];
+		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << "0x" << _registers[RT(_fetched)];
 	}
 	cout << endl;
 }
@@ -215,9 +215,9 @@ void MIPS32::LogImm(bool printRT = false) {
 	cout << _opcode.mnemonic;
 	cout << " " << _reg_names[(Reg)RT(_fetched)];
 	cout << ", " << _reg_names[(Reg)RS(_fetched)];
-	cout << ", " << hex << IMM(_fetched);
+	cout << ", " << hex << "0x" << IMM(_fetched);
 	if (printRT) {
-		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << _registers[RT(_fetched)];
+		cout << " => " << _reg_names[(Reg)RT(_fetched)] << " = " << hex << "0x" << _registers[RT(_fetched)];
 	}
 	cout << endl;
 }
@@ -230,7 +230,7 @@ void MIPS32::LogReg(bool printRD = false) {
 	cout << ", " << _reg_names[(Reg)RS(_fetched)];
 	cout << ", " << _reg_names[(Reg)RT(_fetched)];
 	if (printRD) {
-		cout << " => " << _reg_names[(Reg)RD(_fetched)] << " = " << hex << _registers[RD(_fetched)];
+		cout << " => " << _reg_names[(Reg)RD(_fetched)] << " = " << hex << "0x" << _registers[RD(_fetched)];
 	}
 	cout << endl;
 }
@@ -241,16 +241,24 @@ void MIPS32::LogJr(bool printRA = false) {
 	cout << _opcode.mnemonic;
 	cout << " " << _reg_names[(Reg)RS(_fetched)];
 	if (printRA) {
-		cout << " => " << _reg_names[(Reg)RS(_fetched)] << " = " << hex << _registers[RS(_fetched)];
+		cout << " => " << _reg_names[(Reg)RS(_fetched)] << " = " << hex << "0x" << _registers[RS(_fetched)];
 	}
+	cout << endl;
+}
+
+void MIPS32::LogJ() {
+	if (!_logEnabled) return;
+
+	cout << _opcode.mnemonic;
+	cout << " " << hex << "0x" << (uint32_t)((_pc & J_MASK) | J_TARGET(_fetched));
 	cout << endl;
 }
 
 //Arithmeticand logical instructions
 void MIPS32::ADD()
 {
-	LogReg(true);
 	_registers[RD(_fetched)] = _registers[RS(_fetched)] + _registers[RT(_fetched)];
+	LogReg(true);
 }
 
 void MIPS32::ADDU()
@@ -259,13 +267,14 @@ void MIPS32::ADDU()
 
 void MIPS32::ADDI()
 {
-	
+	_registers[RT(_fetched)] = _registers[(Reg)RS(_fetched)] + (int16_t)IMM(_fetched);
+	LogImm(true);
 }
 
 void MIPS32::ADDIU()
 {
+	_registers[RT(_fetched)] = _registers[(Reg)RS(_fetched)] + IMM(_fetched);
 	LogImm(true);
-	_registers[RT(_fetched)] = _registers[RS(_fetched)] + IMM(_fetched);
 }
 
 void MIPS32::AND()
@@ -306,8 +315,8 @@ void MIPS32::ORI()
 
 void MIPS32::SLL()
 {
-	LogShift(true);
 	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] << SHAMT(_fetched);
+	LogShift(true);
 }
 
 void MIPS32::SLLV()
@@ -324,8 +333,8 @@ void MIPS32::SRAV()
 
 void MIPS32::SRL()
 {
-	LogShift(true);
 	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] >> SHAMT(_fetched);
+	LogShift(true);
 }
 
 void MIPS32::SRLV()
@@ -377,6 +386,34 @@ void MIPS32::SLTIU()
 //Branch instructions
 void MIPS32::BEQ()
 {
+	bool branch = _registers[(Reg)RS(_fetched)] == _registers[(Reg)RT(_fetched)];
+	//TODO: Tick();//branch delay
+	_pc = branch ? _pc + (IMM(_fetched) << 2) : _pc;
+	LogImm();
+}
+
+void MIPS32::BNE()
+{
+	bool branch = _registers[(Reg)RS(_fetched)] != _registers[(Reg)RT(_fetched)];
+	//TODO: Tick();//branch delay
+	_pc = branch ? _pc + (IMM(_fetched) << 2) : _pc;
+	LogImm();
+}
+
+void MIPS32::BLTZ()
+{
+	bool branch = (int32_t)_registers[(Reg)RS(_fetched)] < 0;
+	//TODO: Tick();//branch delay
+	_pc = branch ? _pc + IMM(_fetched) << 2 : _pc;
+	LogImm();
+}
+
+void MIPS32::BGEZ()
+{
+	bool branch = (int32_t)_registers[(Reg)RS(_fetched)] >= 0;
+	//TODO: Tick();//branch delay
+	_pc = branch ? _pc + IMM(_fetched) << 2 : _pc;
+	LogImm();
 }
 
 void MIPS32::BGTZ()
@@ -387,19 +424,7 @@ void MIPS32::BLEZ()
 {
 }
 
-void MIPS32::BNE()
-{
-}
-
-void MIPS32::BGEZ()
-{
-}
-
 void MIPS32::BGEZAL()
-{
-}
-
-void MIPS32::BLTZ()
 {
 }
 
@@ -415,6 +440,10 @@ void MIPS32::BREAK()
 //Jump instructions
 void MIPS32::J()
 {
+	uint32_t j_target = (uint32_t)(_pc & J_MASK) | J_TARGET(_fetched);
+	//TODO: Tick();//branch delay
+	_pc = j_target;
+	LogJ();
 }
 
 void MIPS32::JAL()
@@ -427,8 +456,10 @@ void MIPS32::JALR()
 
 void MIPS32::JR()
 {
+	uint32_t j_target = _registers[(Reg)RS(_fetched)];
+	//TODO: Tick();//branch delay
+	_pc = j_target;
 	LogJr(true);
-	_pc = _registers[(Reg)RS(_fetched)];
 }
 
 //Load instructions
@@ -498,14 +529,13 @@ void MIPS32::SYSCALL()
 	switch (_registers[v0]) {
 		case 1:	//print integer
 		{ 
-
-			cout << dec << _registers[a0] << endl;
+			cout << dec << _registers[a0];
 		} break;
 		
 		case 4: //print string
 		{
 			string str = "";
-			int index = 0;
+			uint32_t index = 0;
 			
 			while (true)
 			{
@@ -514,8 +544,8 @@ void MIPS32::SYSCALL()
 				str.push_back((char)byte);
 				index += 1;
 			};
-			
-			cout << str << endl;
+			if (str.length() > 0)
+				cout << str;
 		}
 	}
 }

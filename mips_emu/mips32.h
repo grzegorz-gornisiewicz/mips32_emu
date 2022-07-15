@@ -9,6 +9,7 @@ using namespace std;
 
 #ifndef _MIPS32
 #define _MIPS32
+#define J_SHIFT 28
 #define OPCODE_SHIFT 26
 #define SHAMT_SHIFT 6
 #define RS_SHIFT 21
@@ -18,14 +19,16 @@ using namespace std;
 #define RS_MASK (uint32_t)(0b11111 << RS_SHIFT)
 #define RT_MASK (uint32_t)(0b11111 << RT_SHIFT)
 #define RD_MASK (uint32_t)(0b11111 << RD_SHIFT)
-#define IMM_MASK 0xffff
-#define FUNCT_MASK 0b111111
+#define IMM_MASK (uint32_t)0x0000ffff
+#define FUNCT_MASK (uint32_t)0b0111111
 #define SHAMT_MASK (uint32_t)(0b11111 << SHAMT_SHIFT)
+#define J_MASK (uint32_t)(0b1111 << J_SHIFT)
 #define RS(data) (uint32_t)((data & RS_MASK) >> RS_SHIFT)
 #define RT(data) (uint32_t)((data & RT_MASK) >> RT_SHIFT)
 #define RD(data) (uint32_t)((data & RD_MASK) >> RD_SHIFT)
 #define SHAMT(data) (uint32_t)((data & SHAMT_MASK) >> SHAMT_SHIFT)
-#define IMM(data) (uint16_t)(data & IMM_MASK)
+#define IMM(data) (uint32_t)(data & IMM_MASK)
+#define J_TARGET(data) (uint32_t)(data & ~OPCODE_MASK)
 #endif // !MIPS32
 
 /*
@@ -157,6 +160,7 @@ private:
 	void LogReg(bool printRD);
 	void LogShift(bool printRT);
 	void LogJr(bool printRA);
+	void LogJ();
 
 	//Arithmetic and logical instructions
 	void ADD();

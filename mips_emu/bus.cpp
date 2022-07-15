@@ -23,7 +23,7 @@ uint32_t Bus::Read(uint32_t addr) {
 
 void Bus::Write(uint32_t addr, uint8_t data)
 {
-	if (addr < Size())
+	if (addr < _mem.size())
 	{
 		_mem[addr] = data;
 	}
