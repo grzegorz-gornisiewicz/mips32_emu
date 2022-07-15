@@ -51,7 +51,7 @@ vector<uint32_t> complex = {
     0x24020004,
     0x240400c0,
     0x00042400,
-    0x24840008,
+    0x2484000c,
     0x0000000c,
     0x2108ffff,
     0x08400008,
@@ -82,12 +82,13 @@ int main()
     IBus *bus = new Bus(16 * 1024);
     //feed with test program and data
     uint32_t addr = (uint32_t)0x00400000;
-    CopyToMemory(addr, &program, bus);
+    CopyToMemory(addr, &complex, bus);
     addr = (uint32_t)0x00C00000;
-    CopyToMemory(addr, &data1, bus);
+    CopyToMemory(addr, &data2, bus);
 
     MIPS32 *core = new MIPS32(bus);
     core->SetPC(0x00400000);
+    core->EnableLog(true);
     
     while (!core->Tick()) {}
 
