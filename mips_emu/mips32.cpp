@@ -279,10 +279,44 @@ void MIPS32::ADDIU()
 
 void MIPS32::AND()
 {
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] & _registers[RT(_fetched)];
+	LogReg(true);
 }
 
 void MIPS32::ANDI()
 {
+	_registers[RD(_fetched)] = _registers[(Reg)RS(_fetched)] & IMM(_fetched);
+	LogImm(true);
+}
+
+void MIPS32::OR()
+{
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] | _registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::ORI()
+{
+	_registers[RD(_fetched)] = _registers[(Reg)RS(_fetched)] | IMM(_fetched);
+	LogImm(true);
+}
+
+void MIPS32::NOR()
+{
+	_registers[RD(_fetched)] = ~(_registers[RS(_fetched)] | _registers[RT(_fetched)]);
+	LogReg(true);
+}
+
+void MIPS32::XOR()
+{
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] ^ _registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::XORI()
+{
+	_registers[RD(_fetched)] = _registers[(Reg)RS(_fetched)] ^ IMM(_fetched);
+	LogImm(true);
 }
 
 void MIPS32::DIV()
@@ -298,18 +332,6 @@ void MIPS32::MULT()
 }
 
 void MIPS32::MULTU()
-{
-}
-
-void MIPS32::NOR()
-{
-}
-
-void MIPS32::OR()
-{
-}
-
-void MIPS32::ORI()
 {
 }
 
@@ -349,13 +371,7 @@ void MIPS32::SUBU()
 {
 }
 
-void MIPS32::XOR()
-{
-}
 
-void MIPS32::XORI()
-{
-}
 
 //Constant - manipulating instructions
 void MIPS32::LHI()
