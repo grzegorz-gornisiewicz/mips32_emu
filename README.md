@@ -8,3 +8,4 @@ MIPS32 emulator
 - JR, J, BEQ, BNE, BLTZ, BGEZ, SRL
 - SYSCALL (prints integer and asciiz string)
 - NOP (in fact it is sll $zero, $zero, 0)
+- AND, ANDI, OR, ORI, NOR, XOR, XORI
